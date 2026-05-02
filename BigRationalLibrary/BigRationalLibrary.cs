@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace BigRationalLibraryNamespace
+namespace HalHeinrich.Numerics
 {
     /// <summary>
     /// Immutable arbitrary-precision rational number represented as a reduced fraction (Numerator / Denominator).

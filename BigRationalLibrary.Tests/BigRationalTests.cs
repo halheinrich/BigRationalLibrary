@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
 using System.Numerics;
-using BigRationalLibraryNamespace;
+using HalHeinrich.Numerics;
 using Xunit;
 
-namespace BigRationalLibraryNamespace.Tests
+namespace HalHeinrich.Numerics.Tests
 {
     public class BigRationalTests
     {
