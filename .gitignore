@@ -46,3 +46,6 @@ artifacts/
 
 ## Rider
 *.sln.iml
+
+## Claude Code local settings
+.claude/

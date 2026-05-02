@@ -14,8 +14,11 @@ namespace BigRationalLibraryNamespace
         ISpanFormattable,
         IParsable<BigRational>
     {
+        private readonly BigInteger _denominator;
+
         public BigInteger Numerator { get; }
-        public BigInteger Denominator { get; }
+        // Mask the default(BigRational) state (where _denominator == 0) as 0/1 instead of an invalid 0/0.
+        public BigInteger Denominator => _denominator.IsZero ? BigInteger.One : _denominator;
 
         public static readonly BigRational Zero = new(BigInteger.Zero, BigInteger.One, alreadyNormalized: true);
         public static readonly BigRational One = new(BigInteger.One, BigInteger.One, alreadyNormalized: true);
@@ -45,7 +48,7 @@ namespace BigRationalLibraryNamespace
                 if (numerator.IsZero)
                 {
                     Numerator = BigInteger.Zero;
-                    Denominator = BigInteger.One;
+                    _denominator = BigInteger.One;
                     return;
                 }
 
@@ -58,7 +61,7 @@ namespace BigRationalLibraryNamespace
             }
 
             Numerator = numerator;
-            Denominator = denominator;
+            _denominator = denominator;
         }
 
         public static BigRational FromInteger(BigInteger value) => new(value, BigInteger.One, alreadyNormalized: true);
@@ -197,9 +200,7 @@ namespace BigRationalLibraryNamespace
             }
 
             var quotient = BigInteger.Divide(num, den);
-            if (quotient.GetByteCount() > 16) // larger than decimal can hold
-                throw new OverflowException("Value cannot be represented as decimal.");
-
+            // BigInteger->decimal cast already throws OverflowException when out of range.
             decimal result = (decimal)quotient;
             if (scale > 0)
                 result /= Pow10Decimal(scale);
@@ -222,34 +223,32 @@ namespace BigRationalLibraryNamespace
         public string ToString(string? format, IFormatProvider? formatProvider)
         {
             if (IsInteger)
-                return Numerator.ToString(formatProvider);
-            // Ignore custom numeric format for simplicity
-            return $"{Numerator.ToString(formatProvider)}/{Denominator.ToString(formatProvider)}";
+                return Numerator.ToString(format, formatProvider);
+            return $"{Numerator.ToString(format, formatProvider)}/{Denominator.ToString(format, formatProvider)}";
         }
 
         public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
         {
             if (IsInteger)
-            {
-                if (Numerator.TryFormat(destination, out charsWritten, format, provider))
-                    return true;
-                charsWritten = 0;
-                return false;
-            }
+                return Numerator.TryFormat(destination, out charsWritten, format, provider);
 
-            // numerator + '/' + denominator
-            var numStr = Numerator.ToString(provider);
-            var denStr = Denominator.ToString(provider);
-            var total = numStr.Length + 1 + denStr.Length;
-            if (total > destination.Length)
+            if (!Numerator.TryFormat(destination, out int numWritten, format, provider))
             {
                 charsWritten = 0;
                 return false;
             }
-            numStr.AsSpan().CopyTo(destination);
-            destination[numStr.Length] = '/';
-            denStr.AsSpan().CopyTo(destination[(numStr.Length + 1)..]);
-            charsWritten = total;
+            if (numWritten >= destination.Length)
+            {
+                charsWritten = 0;
+                return false;
+            }
+            destination[numWritten] = '/';
+            if (!Denominator.TryFormat(destination[(numWritten + 1)..], out int denWritten, format, provider))
+            {
+                charsWritten = 0;
+                return false;
+            }
+            charsWritten = numWritten + 1 + denWritten;
             return true;
         }
 
@@ -268,29 +267,7 @@ namespace BigRationalLibraryNamespace
                 result = default;
                 return false;
             }
-            var span = s.AsSpan().Trim();
-            var slashIndex = span.IndexOf('/');
-            if (slashIndex < 0)
-            {
-                if (BigInteger.TryParse(span, NumberStyles.Integer, provider, out var n))
-                {
-                    result = new BigRational(n, BigInteger.One, alreadyNormalized: true);
-                    return true;
-                }
-                result = default;
-                return false;
-            }
-            var left = span[..slashIndex].Trim();
-            var right = span[(slashIndex + 1)..].Trim();
-            if (BigInteger.TryParse(left, NumberStyles.Integer, provider, out var num) &&
-                BigInteger.TryParse(right, NumberStyles.Integer, provider, out var den) &&
-                !den.IsZero)
-            {
-                result = new BigRational(num, den);
-                return true;
-            }
-            result = default;
-            return false;
+            return TryParse(s.AsSpan(), provider, out result);
         }
 
         public static BigRational Parse(ReadOnlySpan<char> s, IFormatProvider? provider)

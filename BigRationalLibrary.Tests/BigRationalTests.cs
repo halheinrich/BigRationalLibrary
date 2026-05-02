@@ -180,5 +180,38 @@ namespace BigRationalLibraryNamespace.Tests
             Assert.Equal(new BigInteger(5), n);
             Assert.Equal(new BigInteger(9), d);
         }
+
+        [Fact]
+        public void Default_Behaves_As_Zero()
+        {
+            BigRational d = default;
+            Assert.True(d.IsZero);
+            Assert.True(d.IsInteger);
+            Assert.Equal(BigInteger.One, d.Denominator);
+            Assert.Equal(BigRational.Zero, d);
+            Assert.Equal(BigRational.Zero.GetHashCode(), d.GetHashCode());
+            Assert.Equal(new BigRational(3, 4), d + new BigRational(3, 4));
+            Assert.Equal(0, d.CompareTo(BigRational.Zero));
+        }
+
+        [Fact]
+        public void ToString_Honors_Format()
+        {
+            // BigInteger.ToString("X") matches what we delegate to:
+            // 255 -> "0FF" (leading zero prevents misreading as negative two's-complement)
+            var a = new BigRational(255, 1);
+            Assert.Equal("0FF", a.ToString("X", CultureInfo.InvariantCulture));
+            var b = new BigRational(255, 16);
+            Assert.Equal("0FF/10", b.ToString("X", CultureInfo.InvariantCulture));
+        }
+
+        [Fact]
+        public void TryFormat_TooSmall_Returns_False()
+        {
+            var a = new BigRational(123, 456);
+            Span<char> tooSmall = stackalloc char[3];
+            Assert.False(a.TryFormat(tooSmall, out int written, default, CultureInfo.InvariantCulture));
+            Assert.Equal(0, written);
+        }
     }
 }
