@@ -105,8 +105,8 @@ namespace BigRationalLibraryNamespace.Tests
             var b = new BigRational(2, 3);
             Assert.True(a < b);
             Assert.True(b > a);
-            Assert.True(a <= a);
-            Assert.True(b >= b);
+            Assert.True(a <= new BigRational(1, 2));
+            Assert.True(b >= new BigRational(2, 3));
         }
 
         [Fact]
