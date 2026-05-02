@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36408.4 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BigRationalLibrary", "BigRationalLibrary\BigRationalLibrary.csproj", "{07985105-2060-429E-9DF2-CDC750ADC6EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BigRationalLibrary.Tests", "BigRationalLibrary.Tests\BigRationalLibrary.Tests.csproj", "{81504D57-5D5C-AD81-A201-8699070F4D13}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{07985105-2060-429E-9DF2-CDC750ADC6EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07985105-2060-429E-9DF2-CDC750ADC6EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07985105-2060-429E-9DF2-CDC750ADC6EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07985105-2060-429E-9DF2-CDC750ADC6EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81504D57-5D5C-AD81-A201-8699070F4D13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81504D57-5D5C-AD81-A201-8699070F4D13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81504D57-5D5C-AD81-A201-8699070F4D13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81504D57-5D5C-AD81-A201-8699070F4D13}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4A5626FF-450E-41EB-98CE-D246B9238702}
+	EndGlobalSection
+EndGlobal
