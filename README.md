@@ -3,7 +3,7 @@
 Immutable, arbitrary-precision rational numbers for .NET. A `BigRational` is a reduced fraction (`Numerator / Denominator`) backed by `BigInteger`, so it never rounds, never overflows on arithmetic, and stays exact through any chain of `+`, `-`, `*`, `/`.
 
 ```csharp
-using BigRationalLibraryNamespace;
+using HalHeinrich.Numerics;
 
 var third = new BigRational(1, 3);
 var sixth = new BigRational(1, 6);
@@ -32,7 +32,7 @@ There is no NuGet package yet. Either:
 `BigRationalLibrary/BigRationalLibrary.cs` is a single self-contained file. Copy it into your project and you're done.
 
 ```csharp
-using BigRationalLibraryNamespace;
+using HalHeinrich.Numerics;
 ```
 
 ## What you get
