@@ -120,6 +120,116 @@ public readonly struct BigRational :
                                alreadyNormalized: true);
     }
 
+    /// <summary>Raises a value to an integer power.</summary>
+    /// <param name="value">The base.</param>
+    /// <param name="exponent">The exponent. Negative exponents raise the reciprocal to the corresponding positive power.</param>
+    /// <returns><paramref name="value"/> raised to <paramref name="exponent"/>.</returns>
+    /// <remarks>An exponent of zero yields one for every base, including a zero base, matching <see cref="BigInteger.Pow"/>.</remarks>
+    /// <exception cref="DivideByZeroException"><paramref name="value"/> is zero and <paramref name="exponent"/> is negative.</exception>
+    public static BigRational Pow(BigRational value, int exponent)
+    {
+        // 0^0 == 1, matching BigInteger.Pow.
+        if (exponent == 0) return One;
+
+        if (exponent < 0)
+        {
+            if (value.IsZero)
+                throw new DivideByZeroException("Cannot raise zero to a negative exponent.");
+
+            value = Reciprocal(value);
+
+            // Negating int.MinValue overflows an int, so carry the magnitude in a
+            // long. Only that one value exceeds int.MaxValue, and splitting the
+            // exponent keeps the result exact rather than wrapping.
+            var magnitude = -(long)exponent;
+            return magnitude > int.MaxValue
+                ? PowCore(value, int.MaxValue) * value
+                : PowCore(value, (int)magnitude);
+        }
+
+        return PowCore(value, exponent);
+    }
+
+    /// <summary>Raises a value to a strictly positive power.</summary>
+    /// <remarks>
+    /// A reduced fraction stays reduced under exponentiation: gcd(n, d) == 1 implies
+    /// gcd(n^e, d^e) == 1, and d > 0 implies d^e > 0. Normalization is therefore
+    /// already established and the gcd pass can be skipped.
+    /// </remarks>
+    private static BigRational PowCore(BigRational value, int exponent) =>
+        new(BigInteger.Pow(value.Numerator, exponent),
+            BigInteger.Pow(value.Denominator, exponent),
+            alreadyNormalized: true);
+
+    /// <summary>Rounds a value to the nearest integer using the given rounding mode.</summary>
+    /// <param name="value">The value to round.</param>
+    /// <param name="mode">The rounding mode to apply. Defaults to <see cref="MidpointRounding.ToEven"/>.</param>
+    /// <returns>The rounded value as a <see cref="BigInteger"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// Follows the same semantics as <see cref="Math.Round(double, MidpointRounding)"/>.
+    /// <see cref="MidpointRounding.ToEven"/> and <see cref="MidpointRounding.AwayFromZero"/>
+    /// round to the nearest integer and differ only at an exact half. The remaining three
+    /// are directed modes that apply to every value, not only to exact halves:
+    /// <see cref="MidpointRounding.ToZero"/> truncates,
+    /// <see cref="MidpointRounding.ToNegativeInfinity"/> takes the floor and
+    /// <see cref="MidpointRounding.ToPositiveInfinity"/> takes the ceiling.
+    /// </para>
+    /// <para>
+    /// Every mode is defined for negative values. To round halves upward on the number
+    /// line, so that 5/2 gives 3 and -5/2 gives -2, pass
+    /// <see cref="MidpointRounding.ToPositiveInfinity"/>; note this is a directed mode and
+    /// so also rounds non-halves upward.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="mode"/> is not a defined <see cref="MidpointRounding"/> value.</exception>
+    public static BigInteger Round(BigRational value, MidpointRounding mode = MidpointRounding.ToEven)
+    {
+        // Validate before the integer short-circuit below, so an undefined mode is
+        // rejected for every input rather than only for non-integers.
+        if (!Enum.IsDefined(mode))
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown rounding mode.");
+
+        // BigInteger.DivRem truncates toward zero, so the remainder carries the
+        // sign of the numerator and the denominator is known to be positive.
+        var quotient = BigInteger.DivRem(value.Numerator, value.Denominator, out var remainder);
+        if (remainder.IsZero)
+            return quotient;
+
+        // The neighbour of the truncated quotient on the side the value actually lies.
+        var awayFromZero = value.Numerator.Sign < 0 ? quotient - BigInteger.One : quotient + BigInteger.One;
+
+        switch (mode)
+        {
+            case MidpointRounding.ToZero:
+                return quotient;
+
+            case MidpointRounding.ToNegativeInfinity:
+                return remainder.Sign < 0 ? quotient - BigInteger.One : quotient;
+
+            case MidpointRounding.ToPositiveInfinity:
+                return remainder.Sign > 0 ? quotient + BigInteger.One : quotient;
+
+            case MidpointRounding.ToEven:
+            case MidpointRounding.AwayFromZero:
+                // Compare the fractional part against one half without leaving integers:
+                // 2*|remainder| against the denominator.
+                var doubledRemainder = BigInteger.Abs(remainder) * 2;
+                var comparison = doubledRemainder.CompareTo(value.Denominator);
+                if (comparison > 0) return awayFromZero;
+                if (comparison < 0) return quotient;
+
+                // Exact half. Exactly one of the two candidates is even.
+                return mode == MidpointRounding.AwayFromZero || !quotient.IsEven
+                    ? awayFromZero
+                    : quotient;
+
+            default:
+                // Unreachable: the mode was validated above.
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown rounding mode.");
+        }
+    }
+
     // Arithmetic
 
     /// <summary>Adds two rational numbers.</summary>
