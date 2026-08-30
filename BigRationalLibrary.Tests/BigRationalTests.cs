@@ -81,21 +81,21 @@ public class BigRationalTests
     public void Reciprocal_Works()
     {
         var a = new BigRational(-3, 5);
-        Assert.Equal(new BigRational(-5, 3), a.Reciprocal());
+        Assert.Equal(new BigRational(-5, 3), BigRational.Reciprocal(a));
     }
 
     [Fact]
     public void Reciprocal_Zero_Throws()
     {
-        Assert.Throws<DivideByZeroException>(() => BigRational.Zero.Reciprocal());
+        Assert.Throws<DivideByZeroException>(() => BigRational.Reciprocal(BigRational.Zero));
     }
 
     [Fact]
     public void Negate_And_Abs_Work()
     {
         var a = new BigRational(7, 9);
-        Assert.Equal(new BigRational(-7, 9), a.Negate());
-        Assert.Equal(a, a.Negate().Abs());
+        Assert.Equal(new BigRational(-7, 9), BigRational.Negate(a));
+        Assert.Equal(a, BigRational.Abs(BigRational.Negate(a)));
     }
 
     [Fact]

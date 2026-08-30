@@ -96,22 +96,27 @@ public readonly struct BigRational :
     /// <exception cref="DivideByZeroException"><paramref name="denominator"/> is zero.</exception>
     public static BigRational Create(BigInteger numerator, BigInteger denominator) => new(numerator, denominator);
 
-    /// <summary>Returns the additive inverse of this value.</summary>
-    /// <returns>The negation of this value.</returns>
-    public BigRational Negate() => new(BigInteger.Negate(Numerator), Denominator, alreadyNormalized: true);
+    /// <summary>Returns the additive inverse of a value.</summary>
+    /// <param name="value">The value to negate.</param>
+    /// <returns>The negation of <paramref name="value"/>.</returns>
+    public static BigRational Negate(BigRational value) =>
+        new(BigInteger.Negate(value.Numerator), value.Denominator, alreadyNormalized: true);
 
-    /// <summary>Returns the absolute value of this value.</summary>
-    /// <returns>The absolute value.</returns>
-    public BigRational Abs() => Numerator.Sign >= 0 ? this : Negate();
+    /// <summary>Returns the absolute value of a value.</summary>
+    /// <param name="value">The value whose magnitude is returned.</param>
+    /// <returns>The absolute value of <paramref name="value"/>.</returns>
+    public static BigRational Abs(BigRational value) =>
+        value.Numerator.Sign >= 0 ? value : Negate(value);
 
-    /// <summary>Returns the multiplicative inverse of this value.</summary>
-    /// <returns>The reciprocal of this value.</returns>
-    /// <exception cref="DivideByZeroException">This value is zero.</exception>
-    public BigRational Reciprocal()
+    /// <summary>Returns the multiplicative inverse of a value.</summary>
+    /// <param name="value">The value to invert.</param>
+    /// <returns>The reciprocal of <paramref name="value"/>.</returns>
+    /// <exception cref="DivideByZeroException"><paramref name="value"/> is zero.</exception>
+    public static BigRational Reciprocal(BigRational value)
     {
-        if (IsZero) throw new DivideByZeroException("Cannot take reciprocal of zero.");
-        return new BigRational(Denominator * (Numerator.Sign < 0 ? -1 : 1),
-                               BigInteger.Abs(Numerator),
+        if (value.IsZero) throw new DivideByZeroException("Cannot take reciprocal of zero.");
+        return new BigRational(value.Denominator * (value.Numerator.Sign < 0 ? -1 : 1),
+                               BigInteger.Abs(value.Numerator),
                                alreadyNormalized: true);
     }
 
@@ -141,7 +146,7 @@ public readonly struct BigRational :
     public static BigRational operator -(BigRational a, BigRational b)
     {
         if (b.IsZero) return a;
-        if (a.IsZero) return b.Negate();
+        if (a.IsZero) return Negate(b);
         if (a.Denominator == b.Denominator)
             return new BigRational(a.Numerator - b.Numerator, a.Denominator);
 
@@ -196,7 +201,7 @@ public readonly struct BigRational :
     /// <summary>Returns the additive inverse of the value.</summary>
     /// <param name="v">The value.</param>
     /// <returns>The negation of <paramref name="v"/>.</returns>
-    public static BigRational operator -(BigRational v) => v.Negate();
+    public static BigRational operator -(BigRational v) => Negate(v);
 
     // Comparisons
 
