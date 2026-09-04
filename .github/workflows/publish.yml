@@ -78,6 +78,18 @@ jobs:
       # is in fact correct. It runs before Restore so a mistyped tag costs
       # seconds rather than a build and a test run.
       #
+      # THE ORDERING IS ALSO THE FENCE, which the cost argument above does not
+      # say. GITHUB_REF_NAME is attacker-controlled on any repository that
+      # accepts a pushed tag, and the version derived from it flows into Build
+      # and Pack below. Those two are hardened with env: for the same reason
+      # this step is, so a crafted tag reaches neither of them today - but this
+      # step running first is what guarantees the derived value was rejected
+      # before anything consumed it at all. Someone moving the gate after
+      # Restore, to reuse a cached restore, would find in the paragraph above
+      # only a seconds-versus-minutes argument and no reason not to. The two
+      # defences are deliberately independent: env: below survives a
+      # reordering, and this position survives someone dropping an env: block.
+      #
       # pipefail is what makes a failed read loud. Deleting <Version> does not
       # read as empty - the SDK defaults Version to 1.0.0, which is measured,
       # and which the comparison below catches on its own - so the case worth
@@ -98,14 +110,37 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      # env: RATHER THAN AN EXPRESSION IN THE run: LINE, here and at Pack. The
+      # version derives from GITHUB_REF_NAME, which whoever pushes the tag
+      # controls, and an expression is substituted into the script text before
+      # the shell sees it - so a tag carrying shell metacharacters would run as
+      # script here rather than arrive as an argument. The gate above rejects
+      # such a tag before this step, so this is depth rather than the only
+      # defence; it is here because it holds whatever order the steps end up
+      # in, which the gate's position does not.
       - name: Build
-        run: dotnet build -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: dotnet build -c Release --no-restore -p:Version="$PACKAGE_VERSION"
 
       - name: Test
         run: dotnet test -c Release --no-build --nologo
 
       - name: Pack
-        run: dotnet pack BigRationalLibrary/BigRationalLibrary.csproj -c Release --no-build -p:Version=${{ steps.version.outputs.version }} -o nupkgs
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: dotnet pack BigRationalLibrary/BigRationalLibrary.csproj -c Release --no-build -p:Version="$PACKAGE_VERSION" -o nupkgs
 
+      # env: HERE TOO, FOR A SMALLER GAIN, recorded rather than left implicit -
+      # two of three interpolations hardened would otherwise read as a
+      # considered rejection of the third. A repository secret is not
+      # attacker-controlled and GitHub masks it in logs, so there is no
+      # injection to fence; what env: buys is that the token is not part of
+      # this step's script text. It does NOT keep the token off the process
+      # command line: dotnet nuget push takes --api-key as an argument, so the
+      # value lands in argv either way. Said plainly because the uniformity
+      # above would otherwise imply a protection this does not provide.
       - name: Push to GitHub Packages
-        run: dotnet nuget push "nupkgs/*.nupkg" --source https://nuget.pkg.github.com/halheinrich/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push "nupkgs/*.nupkg" --source https://nuget.pkg.github.com/halheinrich/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
