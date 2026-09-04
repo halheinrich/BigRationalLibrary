@@ -12,6 +12,30 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    # A HANG IS NOT A FAILURE. GitHub's default job timeout is 360 minutes, so
+    # with no bound here a wedged restore, a hung runner or a Push step waiting
+    # forever on the registry would sit silent for six hours before anything
+    # went red. This job is worse placed than most to absorb that: it runs only
+    # on a v* tag, so it is rare and nobody is watching it, and a hang between
+    # Pack and Push leaves a release neither published nor visibly failed.
+    #
+    # Ten minutes. The one run of this workflow to date took 25 seconds end to
+    # end, 21 of them in its own steps. That single data point is thin and it is
+    # already stale - it predates both the lock files and the test suite growing
+    # by a factor of seven - and the Push step depends on the latency of an
+    # external registry, which is not this repository's to predict. So the
+    # number is set from what the guard is for rather than from the observation:
+    # roughly twenty-five times the run we have, which still turns a genuine
+    # hang red in minutes rather than hours. A publish job legitimately runs
+    # longer than a build-and-test job, and this one also builds and tests
+    # before it packs.
+    #
+    # It is not a performance budget and must not be tightened into one. A
+    # timeout that trips on a slow-but-correct run teaches people to ignore it,
+    # and the run it would teach them to ignore here is a release.
+    timeout-minutes: 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
