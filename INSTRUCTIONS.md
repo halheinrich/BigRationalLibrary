@@ -286,14 +286,13 @@ Equality is value equality over the reduced parts, so `==`, `Equals` and
   honest meaning for an exact rational. `Round`'s existing shape should be
   checked against `IFloatingPoint<T>`-style rounding members before either is
   fixed.
-- **CA2225's named operator alternates are deferred, not dismissed**
-  (`halheinrich/Math#17`). The rule wants `Add`/`Subtract`/`Multiply`/`Divide`
-  and `ToDouble`/`ToDecimal` beside the operators; it is currently suppressed in
-  `.editorconfig` on the grounds that this type targets generic math, where the
-  operator is the canonical spelling and no `INumberBase<T>` member is a named
-  alternate. Which named methods actually belong is a question the `INumber<T>`
-  work above should settle, and the two should be decided together rather than
-  the surface being grown twice.
+- **CA2225's named operator alternates are permanently suppressed, not
+  deferred** (`halheinrich/Math#17`). Its ten hits fall into three groups with
+  a distinct reason each. All three reasons live in `.editorconfig`, beside the
+  `dotnet_diagnostic.CA2225.severity` line, and are deliberately not repeated
+  here — the same reasoning kept in two files is what let this entry drift into
+  contradicting that one. `halheinrich/Math#34` carries the open generic-math
+  interface work; the suppression stands either way and does not wait on it.
 
 Cross-cutting items — the package version ruling, the shared workflow baseline,
 and this member's place in the dependency graph — are tracked in
