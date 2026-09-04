@@ -112,12 +112,42 @@ dotnet_diagnostic.CA1716.severity = none
 # Default severity (warning -> error) is fine.
 
 # CA2225: Provide friendly named alternates for operator overloads.
-# BigRational targets generic math, where the operator IS the canonical
-# spelling: no INumberBase<T> / IAdditionOperators<T> member is a named
-# alternate, so Add/Subtract/Multiply/Divide would be a second spelling of
-# a rule the operators already state. Named alternates are a pre-generic-math
-# CLS convention. Which named methods (if any) belong is a decision for the
-# INumber<T> work, not for this baseline.
+# Permanently suppressed. Ten hits, three different cases, three different
+# reasons - no one reason reaches all ten, and the reason recorded here
+# before enumerated four.
+#
+# FIVE are the arithmetic operators - op_Addition, op_Subtraction,
+# op_Multiply, op_Division, op_UnaryPlus - where the operator IS the
+# canonical spelling. INumberBase<T> declares no Add, Subtract, Multiply,
+# Divide or Plus; it inherits IAdditionOperators and its siblings, and
+# IUnaryPlusOperators declares only op_UnaryPlus. A named alternate would be
+# a second spelling of a rule the operators already state, and named
+# alternates are a pre-generic-math CLS convention. op_UnaryNegation is
+# absent from the hits only because Negate already exists - which is what
+# made this group look like four rather than five.
+#
+# TWO are the explicit conversions, op_Explicit to double and to decimal,
+# and generic math says nothing about them: TryConvertTo* is about producing
+# another INumberBase, not a named ToDouble(). Their reason is this
+# umbrella's own - an explicit cast signals you are leaving exactness, and a
+# friendly ToDouble() makes that look routine.
+#
+# THREE are the implicit widenings from int, long and BigInteger, and for
+# these the named alternate already exists. FromInteger(BigInteger) produces
+# exactly what the three operators produce, and int and long widen to
+# BigInteger implicitly, so the one method covers the family; CA2225 matches
+# per-operator names and so cannot see that. The (BigInteger, BigInteger)
+# constructor and Create reach the same values by name again. The exactness
+# reason above does not merely fail to reach this group - it points the
+# other way, because these are total, lossless widenings INTO exactness.
+# Three type-specific spellings of a conversion that cannot fail would be
+# surface without capability.
+#
+# What is NOT claimed here is that BigRational targets generic math. It
+# implements no generic-math interface today, so that would state an
+# intention rather than a fact. halheinrich/Math#34 is the open question of
+# which of those interfaces it should implement; this suppression stands
+# either way, and does not wait on the answer.
 dotnet_diagnostic.CA2225.severity = none
 
 # IDE0290: Use primary constructor.
