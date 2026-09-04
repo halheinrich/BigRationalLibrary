@@ -49,6 +49,52 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # A WRONG VERSION HERE DOES NOT FAIL, IT PUBLISHES. Two things determine
+      # a version and nothing reconciles them: the <Version> property in the
+      # .csproj, and the v* tag the step above derives from. The -p:Version=
+      # passed to Build and Pack overrides the property, so the tag alone
+      # decides what reaches the feed - while the property alone is what
+      # Collatz and RationalApproximation compile against by ProjectReference
+      # and record in their deps.json. A tag that disagrees with the property
+      # gives a green run, a published package, and two members reporting a
+      # version the feed does not have.
+      #
+      # AGENTS.md's Writing code section single-sources a decision, so the
+      # property is the source - one value a human edits deliberately in a
+      # reviewed commit - and this step demotes the tag to a claim about it,
+      # failing the job when the claim is false. Like the timeout above it
+      # guards a job that runs only on a v* tag, when nobody is watching, so a
+      # mechanism has to be the thing that notices; that is the same reason
+      # check_docs.py and check-members.sh exist rather than prose asking
+      # someone to remember.
+      #
+      # It cannot be a build-time target. -p:Version= overrides the property
+      # before any target runs, so a target would find the tag's value already
+      # sitting in $(Version), with nothing left to compare against short of a
+      # second property in the same file - the two-sources defect one level
+      # down. -getProperty evaluates the project the way the build will, which
+      # a grep of the .csproj does not: were <Version> ever to move into
+      # Directory.Build.props, grep would read nothing and fail a publish that
+      # is in fact correct. It runs before Restore so a mistyped tag costs
+      # seconds rather than a build and a test run.
+      #
+      # pipefail is what makes a failed read loud. Deleting <Version> does not
+      # read as empty - the SDK defaults Version to 1.0.0, which is measured,
+      # and which the comparison below catches on its own - so the case worth
+      # guarding is msbuild itself erroring, and without pipefail the exit
+      # status of the pipeline would be tr's, not msbuild's.
+      - name: Verify the tag matches the project version
+        env:
+          TAG_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          project_version=$(dotnet msbuild BigRationalLibrary/BigRationalLibrary.csproj -getProperty:Version -nologo | tr -d '[:space:]')
+          if [ "$project_version" != "$TAG_VERSION" ]; then
+            echo "::error::Tag v$TAG_VERSION does not match <Version> $project_version in BigRationalLibrary/BigRationalLibrary.csproj. That .csproj is the source of truth: either the tag is wrong, or the version bump commit is missing."
+            exit 1
+          fi
+          echo "Tag v$TAG_VERSION matches <Version> $project_version."
+
       - name: Restore
         run: dotnet restore
 
