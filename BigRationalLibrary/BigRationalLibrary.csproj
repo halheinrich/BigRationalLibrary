@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>HalHeinrich.Numerics.BigRational</PackageId>
-    <Version>0.1.0-preview1</Version>
+    <Version>0.1.0-preview2</Version>
     <Authors>Hal Heinrich</Authors>
     <Description>Immutable arbitrary-precision rational numbers for .NET, represented as reduced BigInteger fractions with exact arithmetic.</Description>
     <RepositoryUrl>https://github.com/halheinrich/BigRationalLibrary</RepositoryUrl>
