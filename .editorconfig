@@ -134,6 +134,23 @@ dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1508.severity = none
 
 # CA1515: Types can be made internal.
-# xunit v2 only discovers public test classes; making them internal would
-# silently drop every test rather than fail the build.
+# Kept, although it is now inert for the classes that actually hold tests.
+#
+# Measured in this repo on 2026-09-03, with this line temporarily removed:
+# under the old test tooling (xunit 2.6.6, Test.Sdk 17.9.0, runner 2.5.7,
+# coverlet 6.0.0) CA1515 fired on all three test classes; after bumping only
+# those four packages it fired on none. That lag was the whole reason this
+# repo raised CA1515 and no other member did.
+#
+# The exemption is keyed on test-method attributes, not on xunit types in
+# general, so it does not cover every public type a test project needs. Probed
+# on the same date, under the new tooling and with this line removed: a public
+# shared fixture carrying no attribute of its own, and a public
+# [CollectionDefinition] marker, both still tripped the rule. Those types have
+# to be public for xunit to use them.
+#
+# So this stays as a standing guard rather than being deleted as spent. xunit
+# v2 discovers only public test classes, and the failure mode if the rule were
+# obeyed is the dangerous one: not a red build, but quieter discovery that
+# still reports green.
 dotnet_diagnostic.CA1515.severity = none
