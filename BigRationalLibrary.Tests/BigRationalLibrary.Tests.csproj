@@ -2,13 +2,23 @@
 
   <!--
     TargetFramework, LangVersion, Nullable, ImplicitUsings and analyzer
-    settings come from Directory.Build.props. Test projects opt out of XML
-    doc generation, as that file documents.
+    settings come from Directory.Build.props, XML doc generation included.
   -->
   <PropertyGroup>
     <RootNamespace>HalHeinrich.Numerics.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!--
+      GenerateDocumentationFile is inherited as true from Directory.Build.props.
+      It is IDE0005's documented prerequisite (roslyn#41640), so opting out here
+      made the rule structurally unable to fire in this project - the hole
+      halheinrich/Math#43 found. An unused using rots identically in a test, so
+      the prerequisite is met and the undocumented-member warning the generated
+      file provokes is suppressed instead. Test methods are named, not
+      documented; CS1591 is the only part of doc generation this project wants
+      no part of.
+    -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
