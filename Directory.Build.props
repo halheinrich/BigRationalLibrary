@@ -37,12 +37,18 @@
     the restore if the lock file is out of sync with the csproj.
 
     Unconditional, deliberately. This was previously gated on
-    ContinuousIntegrationBuild, which made a guarantee this file states depend
-    on a property set by a workflow in another directory — and three of the
-    four members that carry this file have no workflow at all, so what reads
-    here as enforcement was documentation there. A file whose promise needs an
-    external switch to hold cannot state its own promise, and removing the
-    condition is what makes the promise this file's own.
+    ContinuousIntegrationBuild, a property nothing in this repository sets.
+    The SDK does not infer it from a CI environment: measured on 10.0.400 it
+    evaluates empty even with CI and GITHUB_ACTIONS set, and only an explicit
+    -p:ContinuousIntegrationBuild=true gives it a value. The one workflow here,
+    publish.yml, restores without passing it. So the gate never fired in this
+    repository at all, including on the path that builds and publishes the
+    package — a package could be produced from a graph the committed lock did
+    not describe. That path is now enforced too, which is the intended effect.
+
+    A file whose promise depends on a switch set somewhere else cannot state
+    its own promise. Removing the condition makes the promise this file's own,
+    which is the reason to prefer it over giving the workflow the flag.
 
     The failure it prevents is not hypothetical. A committed lock file
     elsewhere in this project recorded a dependency at preview1 against a
@@ -51,12 +57,12 @@
     drift was invisible to every gate. Locked mode is what turns that into a
     failed restore.
 
-    Accepted cost: a deliberate package change now needs a restore that is
-    told to re-evaluate the lock — `dotnet restore -p:RestoreForceEvaluate=true`,
+    Accepted cost: a deliberate package change now needs a restore told to
+    re-evaluate the lock — `dotnet restore -p:RestoreForceEvaluate=true`,
     which is what the CLI's force-evaluate switch sets — rather than a plain
     restore. One command, once per intended change, on an artefact whose whole
-    purpose is that it does not change silently. (The switch is spelled here as
-    a property because an XML comment may not contain a double hyphen.)
+    purpose is that it does not change silently. (The switch is spelled here
+    as a property because an XML comment may not contain a double hyphen.)
   -->
   <PropertyGroup>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
