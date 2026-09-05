@@ -143,11 +143,12 @@ dotnet_diagnostic.CA1716.severity = none
 # Three type-specific spellings of a conversion that cannot fail would be
 # surface without capability.
 #
-# What is NOT claimed here is that BigRational targets generic math. It
-# implements no generic-math interface today, so that would state an
-# intention rather than a fact. halheinrich/Math#34 is the open question of
-# which of those interfaces it should implement; this suppression stands
-# either way, and does not wait on the answer.
+# BigRational does now target generic math: halheinrich/Math#34 ruled the set
+# and it implements the ten operator interfaces, and not INumberBase<T> or
+# INumber<T>. That neither created nor removed a hit - the count was measured
+# again at ten, in the same three groups, after the declarations landed - and
+# it does not carry the suppression either. The three reasons above stand on
+# their own, which is why this line never waited on the answer.
 dotnet_diagnostic.CA2225.severity = none
 
 # IDE0290: Use primary constructor.

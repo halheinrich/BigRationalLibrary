@@ -12,7 +12,28 @@ public readonly struct BigRational :
     IEquatable<BigRational>,
     IComparable<BigRational>,
     ISpanFormattable,
-    IParsable<BigRational>
+    IParsable<BigRational>,
+    ISpanParsable<BigRational>,
+    // The generic-math operator interfaces, individually. INumberBase<T> and
+    // INumber<T> are deliberately absent: an exact rational has no representable
+    // range to saturate against, so their conversion contract cannot be honoured.
+    // halheinrich/Math#34 holds the ruling and the reasoning in full; this is a
+    // pointer to it, not a second copy of it.
+    //
+    // IComparisonOperators already implies IEqualityOperators, and ISpanParsable
+    // already implies IParsable. Both are named anyway, so this base list is the
+    // ruled set read straight off the type rather than half of it plus an
+    // inheritance chain the reader has to walk.
+    IAdditionOperators<BigRational, BigRational, BigRational>,
+    ISubtractionOperators<BigRational, BigRational, BigRational>,
+    IMultiplyOperators<BigRational, BigRational, BigRational>,
+    IDivisionOperators<BigRational, BigRational, BigRational>,
+    IUnaryNegationOperators<BigRational, BigRational>,
+    IUnaryPlusOperators<BigRational, BigRational>,
+    IEqualityOperators<BigRational, BigRational, bool>,
+    IComparisonOperators<BigRational, BigRational, bool>,
+    IAdditiveIdentity<BigRational, BigRational>,
+    IMultiplicativeIdentity<BigRational, BigRational>
 {
     private readonly BigInteger _denominator;
 
@@ -579,4 +600,12 @@ public readonly struct BigRational :
     static BigRational IParsable<BigRational>.Parse(string s, IFormatProvider? provider) => Parse(s, provider);
     static bool IParsable<BigRational>.TryParse(string? s, IFormatProvider? provider, out BigRational result) =>
         TryParse(s, provider, out result);
+
+    // Generic-math identity elements, implemented explicitly. Zero and One are
+    // already the named spellings this type publishes, so a public AdditiveIdentity
+    // would be a second public name for one value. Generic code reaches these as
+    // T.AdditiveIdentity / T.MultiplicativeIdentity, which is the only caller they
+    // need.
+    static BigRational IAdditiveIdentity<BigRational, BigRational>.AdditiveIdentity => Zero;
+    static BigRational IMultiplicativeIdentity<BigRational, BigRational>.MultiplicativeIdentity => One;
 }

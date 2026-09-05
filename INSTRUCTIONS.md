@@ -45,7 +45,12 @@ member, and to whatever external consumers the published package has.
 `BigRational` is a `readonly struct`: an immutable arbitrary-precision rational
 stored as a reduced fraction whose denominator is always strictly positive. The
 sign lives on the numerator. It implements `IEquatable<BigRational>`,
-`IComparable<BigRational>`, `ISpanFormattable` and `IParsable<BigRational>`.
+`IComparable<BigRational>`, `ISpanFormattable`, `IParsable<BigRational>`,
+`ISpanParsable<BigRational>` and the ten generic-math *operator* interfaces:
+addition, subtraction, multiplication, division, unary negation, unary plus,
+equality, comparison, and the two identity elements. It does **not** implement
+`INumberBase<T>` or `INumber<T>`. `halheinrich/Math#34` carries that ruling and
+its reasons; they are not restated here.
 
 ### The two invariants everything else rests on
 
@@ -104,14 +109,24 @@ denominators match, and otherwise go through `ad ± bc / bd` and reduce.
 `CompareTo` cross-multiplies and compares the two products, which is exact and
 needs no division. All six relational operators route through it.
 
-### The unary surface is static, and that is load-bearing
+### The unary surface is static, and its reason was replaced under it
 
 `Abs`, `Negate` and `Reciprocal` are `static` methods taking a `BigRational`,
-not instance methods. Every generic-math interface member is `static abstract`,
-so an instance `Abs()` could never satisfy `INumberBase<T>.Abs` — and
-`INumber<T>` support is a recorded goal (§ Subproject-internal next steps).
-Shipping static members beside the old instance ones would have encoded one rule
-in two spellings, so the instance forms were removed rather than kept as shims.
+not instance methods. The reason recorded when they moved was generic math:
+every generic-math interface member is `static abstract`, so an instance `Abs()`
+could never satisfy `INumberBase<T>.Abs`, and `INumber<T>` was then a stated
+goal. Shipping static members beside the old instance ones would have encoded
+one rule in two spellings, so the instance forms were removed rather than kept
+as shims.
+
+**That argument no longer reaches this shape.** `halheinrich/Math#34` ruled
+`INumberBase<T>` out, and none of the ten operator interfaces the type does
+implement declares `Abs`, `Negate` or `Reciprocal` — they declare operators,
+which are static whatever the surface around them looks like. Two reasons that
+do still reach it keep the shape: it matches `BigInteger.Abs` and
+`BigInteger.Negate`, and the instance forms are already gone from a published
+package, so restoring them is a breaking change and would have to be decided as
+one. Recorded because the justification changed, not the decision.
 
 `operator -` delegates to `Negate` rather than duplicating it.
 
@@ -168,6 +183,9 @@ returns `false` rather than throwing when the destination is too small. Parsing
 accepts both shapes, trims around the parts, and rejects a zero denominator.
 `IParsable<BigRational>`'s members are implemented explicitly, so the public
 `Parse` overload can keep its optional `provider` parameter.
+`ISpanParsable<BigRational>` needed no such forwarder: the span `Parse` and
+`TryParse` already match its signatures exactly, so they satisfy it implicitly
+and adding the interface was a declaration and nothing else.
 
 The conversion to `decimal` scales the numerator by ten until the division is
 exact or 28 digits are consumed, then divides — so it is exact when the value is
@@ -181,7 +199,17 @@ Namespace `HalHeinrich.Numerics`.
 ```csharp
 public readonly struct BigRational :
     IEquatable<BigRational>, IComparable<BigRational>,
-    ISpanFormattable, IParsable<BigRational>
+    ISpanFormattable, IParsable<BigRational>, ISpanParsable<BigRational>,
+    IAdditionOperators<BigRational, BigRational, BigRational>,
+    ISubtractionOperators<BigRational, BigRational, BigRational>,
+    IMultiplyOperators<BigRational, BigRational, BigRational>,
+    IDivisionOperators<BigRational, BigRational, BigRational>,
+    IUnaryNegationOperators<BigRational, BigRational>,
+    IUnaryPlusOperators<BigRational, BigRational>,
+    IEqualityOperators<BigRational, BigRational, bool>,
+    IComparisonOperators<BigRational, BigRational, bool>,
+    IAdditiveIdentity<BigRational, BigRational>,
+    IMultiplicativeIdentity<BigRational, BigRational>
 {
     public BigInteger Numerator { get; }      // carries the sign
     public BigInteger Denominator { get; }    // always > 0; default reads as 1
@@ -220,6 +248,10 @@ public readonly struct BigRational :
     public static BigRational Parse(ReadOnlySpan<char> s, IFormatProvider? provider);
     public static bool TryParse(string? s, IFormatProvider? provider, out BigRational result);
     public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out BigRational result);
+
+    // The two identity elements are explicit interface implementations,
+    // reachable from generic code only as T.AdditiveIdentity and
+    // T.MultiplicativeIdentity. Zero and One are the public spellings.
 }
 ```
 
@@ -279,20 +311,24 @@ Equality is value equality over the reduced parts, so `==`, `Equals` and
 
 ## Subproject-internal next steps
 
-- **`INumber<T>` and the generic-math interfaces.** Desirable, not urgent, and
-  entirely internal to this repo. The unary surface was already made static to
-  make it reachable, so the remaining work is the interface set itself —
-  `INumberBase<T>`, the operator interfaces, and deciding which members have an
-  honest meaning for an exact rational. `Round`'s existing shape should be
-  checked against `IFloatingPoint<T>`-style rounding members before either is
-  fixed.
+- **Generic math is settled, not pending** (`halheinrich/Math#34`). The ten
+  operator interfaces are implemented; `INumberBase<T>` and `INumber<T>` are
+  ruled out, and the issue holds the reasoning — pointed at rather than
+  restated, for the reason the next bullet gives. It is listed here so a reader
+  finds a ruling instead of a gap and re-opens it by accident. Reopen it only
+  for a concrete consumer that needs `INumberBase<T>` specifically. The old
+  sub-item asking whether `Round` should match `IFloatingPoint<T>`-style
+  rounding members dissolved with it: `IFloatingPoint<T>` derives from
+  `INumberBase<T>`, so nothing constrains `Round`'s shape from that direction
+  any more.
 - **CA2225's named operator alternates are permanently suppressed, not
   deferred** (`halheinrich/Math#17`). Its ten hits fall into three groups with
   a distinct reason each. All three reasons live in `.editorconfig`, beside the
   `dotnet_diagnostic.CA2225.severity` line, and are deliberately not repeated
   here — the same reasoning kept in two files is what let this entry drift into
-  contradicting that one. `halheinrich/Math#34` carries the open generic-math
-  interface work; the suppression stands either way and does not wait on it.
+  contradicting that one. The count was re-measured at ten, in the same three
+  groups, after the generic-math interfaces landed: the suppression never
+  depended on them, which is why it never waited on `halheinrich/Math#34`.
 
 Cross-cutting items — the package version ruling, the shared workflow baseline,
 and this member's place in the dependency graph — are tracked in
