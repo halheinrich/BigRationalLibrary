@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BigRationalLibrary.Tests/BigRationalLibrary.Tests.csproj" />
+  <Project Path="BigRationalLibrary/BigRationalLibrary.csproj" />
+</Solution>

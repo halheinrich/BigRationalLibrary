@@ -15,7 +15,7 @@ framework and namespace conventions are umbrella-wide and live in
 
 ## Solution
 
-`D:\Users\Hal\Documents\Visual Studio 2026\Projects\Math\BigRationalLibrary\BigRationalLibrary.sln`
+`D:\Users\Hal\Documents\Visual Studio 2026\Projects\Math\BigRationalLibrary\BigRationalLibrary.slnx`
 
 ## Repo
 
