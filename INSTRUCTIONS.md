@@ -358,13 +358,18 @@ which the answer degrades.
   must be public for xUnit to use them. Obeying the rule would not turn the
   build red; xUnit would discover less and still report green. The suppression's
   own comment carries the dated measurement behind this.
-- **Locked-mode restore is dormant in CI here.** `Directory.Build.props` gates
-  `RestoreLockedMode` on `ContinuousIntegrationBuild`, and nothing in this repo
-  sets that property — `publish.yml` does not pass it. So the committed
-  `packages.lock.json` files are honoured by convention rather than enforced: a
-  package added without regenerating them will not fail the workflow the way it
-  would in a member whose CI passes the flag. Regenerate them by hand
-  (`dotnet restore --force-evaluate`) in the same change as any package edit.
+- **Locked-mode restore is enforced here, on every restore.**
+  `Directory.Build.props` sets `RestoreLockedMode` beside
+  `RestorePackagesWithLockFile`, neither carrying a `Condition`, so the
+  committed `packages.lock.json` files are validated by local builds and by
+  `publish.yml` alike. Edit a `PackageReference` without regenerating the lock
+  and restore **fails** with `NU1004` — measured 2026-09-05 against a control
+  restore of the unmodified tree, which succeeds. Regenerate deliberately, in
+  the same change as the package edit: `dotnet restore --force-evaluate`, the
+  remedy `NU1004`'s own message names. **Why** the property is unconditional,
+  and what that costs, is in the props file's comment and is deliberately not
+  copied here — this bullet asserted the opposite of the build for as long as
+  it kept its own copy of that reasoning.
 - **`nuget.config` deliberately has no `github` source.** This repo produces
   `HalHeinrich.Numerics.BigRational` and consumes no `HalHeinrich.*` package, so
   the PAT the consuming members need would be a failure mode here with nothing
