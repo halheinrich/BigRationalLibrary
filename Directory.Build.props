@@ -31,6 +31,55 @@
   </PropertyGroup>
 
   <!--
+    Every ProjectReference builds in the configuration its consumer was
+    asked for. halheinrich/Math#47.
+
+    In this member the property is a pure no-op, and it is adopted anyway.
+    Nothing escapes this repo: the only ProjectReference here is
+    BigRationalLibrary.Tests to BigRationalLibrary, both projects are in
+    this solution, so the solution's configuration map already covers the
+    edge and it already resolves correctly. Confirmed rather than reasoned
+    - Debug and Release outputs are byte-identical with and without this
+    property, 2eb25db84fa69872 and 8dc523aee5947338 either way, measured
+    at `-t:Rebuild` through the solution. It fixed nothing here and the
+    comment should not be read as claiming it did.
+
+    What it buys is that the baseline is one thing in every member rather
+    than a property three repos carry and one omits, where the omission
+    would have to be re-justified by whoever next reads the four files
+    side by side. It is also insurance with no premium: the day this repo
+    gains a ProjectReference that leaves it, the edge is already covered.
+
+    Where it matters, and why the default is the wrong one there: in
+    Microsoft.Common.CurrentVersion.targets on SDK 10.0.400, line 1584
+    defaults ShouldUnsetParentConfigurationAndPlatform to true whenever
+    BuildingSolutionFile or BuildingInsideVisualStudio is set, and line
+    1609 hands it to the AssignProjectConfiguration task, whose job is
+    then to rewrite SetConfiguration on every reference absent from the
+    solution map, unsetting the parent's configuration so the referenced
+    project falls to its own default - Debug. A consumer that references
+    this library from another repo has no entry for it in its own
+    solution map, so its Release build links this library's Debug output,
+    with no warning and no error. Line 1584's condition names
+    BuildingInsideVisualStudio as well, so that was never confined to
+    `dotnet build <solution>`; Release builds inside Visual Studio linked
+    the Debug producer too.
+
+    Flagged rather than quietly relied on. This overrides an MSBuild
+    default instead of working with it, and the property is not documented
+    public surface; it lives in the SDK's targets, which is where it was
+    read. The default exists so a solution configuration is not forced
+    onto a project that may not define it. Every member here defines
+    exactly Debug and Release with no platform variation - and the
+    property propagates Platform as well as Configuration, so that
+    AnyCPU-only premise is load-bearing, not incidental. If it ever
+    changes, this is the decision to revisit.
+  -->
+  <PropertyGroup>
+    <ShouldUnsetParentConfigurationAndPlatform>false</ShouldUnsetParentConfigurationAndPlatform>
+  </PropertyGroup>
+
+  <!--
     Lock-file based version pinning. The lock file (packages.lock.json)
     captures exactly the resolved package versions and is committed to git,
     so any clone restores the same dependency graph. RestoreLockedMode fails
