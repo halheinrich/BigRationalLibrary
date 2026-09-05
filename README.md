@@ -27,9 +27,9 @@ There is no NuGet package yet. Either:
 </ItemGroup>
 ```
 
-**Option B — drop the file in**
+**Option B — drop the files in**
 
-`BigRationalLibrary/BigRationalLibrary.cs` is a single self-contained file. Copy it into your project and you're done.
+The library is two files, neither with third-party dependencies: `BigRationalLibrary/BigRationalLibrary.cs` holds `BigRational`, and `BigRationalLibrary/IntegerMath.cs` holds `IntegerMath`. Copy in both. (Neither needs the other's *code*, but `IntegerMath`'s doc comments link to `BigRational`, so taking it alone draws unresolved-`cref` warnings in a project that generates XML docs.)
 
 ```csharp
 using HalHeinrich.Numerics;
@@ -101,6 +101,30 @@ The format string passes through to `BigInteger.ToString` for both halves — so
 
 There are **no** conversions *from* `double` or `decimal` yet — you'd need to write `BigRational.FromDecimal(...)` yourself if you need that.
 
+## Integer helpers
+
+`IntegerMath` is a small static class of exact integer operations that have no rational counterpart. It ships in the same namespace and operates purely on `BigInteger`.
+
+```csharp
+using System.Numerics;
+using HalHeinrich.Numerics;
+
+IntegerMath.Sqrt(new BigInteger(99));   // 9   -- floor is the default
+IntegerMath.Sqrt(BigInteger.Pow(10, 60));  // exactly 10^30, no floating point anywhere
+```
+
+`Sqrt` takes an optional rounding mode:
+
+| Mode | `n = 8` | `n = 10` | Meaning |
+|---|---|---|---|
+| `IntegerSqrtRounding.Floor` (default) | 2 | 3 | largest `k` with `k² ≤ n` |
+| `IntegerSqrtRounding.Ceiling` | 3 | 4 | smallest `k` with `k² ≥ n` |
+| `IntegerSqrtRounding.Nearest` | 3 | 3 | the `k` closest to `√n` |
+
+`Nearest` needs no midpoint policy the way `MidpointRounding` does: for a non-square `n`, `√n` is irrational and so never falls exactly between two integers, and for a square `n` it falls exactly on one. There are no ties to break.
+
+The domain is the **non-negative** integers. `Sqrt` throws `ArgumentOutOfRangeException` on a negative value — nothing squares to a negative, and `BigInteger` has no NaN to hand back instead — and on a rounding mode outside the enum.
+
 ## Behavioral notes (read these)
 
 - **Equality is structural.** Because every value is stored reduced with a positive denominator, `==` and `GetHashCode` use the `(Numerator, Denominator)` pair directly. Two `BigRational`s are equal iff they represent the same number.
@@ -129,7 +153,7 @@ These are not bugs, just things this library doesn't ship yet:
 dotnet test
 ```
 
-25 xUnit tests covering construction, reduction, sign normalization, all four arithmetic operators, comparisons, parsing, formatting (string + span), conversions, and the `default(BigRational)` guarantee.
+xUnit, covering construction, reduction, sign normalization, all four arithmetic operators, comparisons, parsing, formatting (string + span), conversions, the `default(BigRational)` guarantee, and `IntegerMath.Sqrt` across its three rounding modes. The suite size is whatever `dotnet test` reports; it is deliberately not written down here, because a number in a README goes stale at the next commit.
 
 ## License
 

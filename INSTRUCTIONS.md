@@ -33,12 +33,15 @@ member, and to whatever external consumers the published package has.
 
 ## Layout
 
-- **`BigRationalLibrary`** — the library. A single public type, `BigRational`,
-  and its private helpers. This is the whole published surface.
+- **`BigRationalLibrary`** — the library, in two files. `BigRationalLibrary.cs`
+  holds `BigRational` and its private helpers; `IntegerMath.cs` holds
+  `IntegerMath` and `IntegerSqrtRounding`. Together these are the whole
+  published surface.
 - **`BigRationalLibrary.Tests`** — xUnit. Split by concern rather than by a
-  single file per type: the general surface, `Pow`, and `Round`. It has **no**
-  `InternalsVisibleTo` and does not need one — everything it exercises is
-  public, because everything the package ships is public.
+  single file per type: the general surface, `Pow`, `Round`, generic math, and
+  `IntegerMath`. It has **no** `InternalsVisibleTo` and does not need one —
+  everything it exercises is public, because everything the package ships is
+  public.
 
 ## Architecture
 
@@ -192,6 +195,50 @@ exact or 28 digits are consumed, then divides — so it is exact when the value 
 representable and correctly rounded when it is not, and relies on the
 `BigInteger`-to-`decimal` cast to throw `OverflowException` out of range.
 
+## `IntegerMath` — the integer primitive beside the rational
+
+`IntegerMath.Sqrt` is an exact integer square root with three rounding modes and
+no floating-point intermediate. It arrived here from `ContinuedFractions` under
+`halheinrich/Math#10`: a primitive two members need does not belong to whichever
+member wrote it first, and `RealConstants` wants it for a Newton seed at
+migration step 5.
+
+Three shape decisions, each of which a consumer now depends on:
+
+- **Namespace `HalHeinrich.Numerics`, not a sub-namespace.** It is a peer of
+  `BigRational`, and `ContinuedFractions` sits in the child namespace
+  `HalHeinrich.Numerics.ContinuedFractions`, so it resolves the name from the
+  parent without a `using` of its own.
+- **A top-level `static class`, not a member of `BigRational`.** The operations
+  are about integers. Nesting them in the rational would make the rational a
+  prerequisite for reaching them, and `BigRational` is a struct besides.
+- **`IntegerSqrtRounding` is top-level, not nested.** CA1034 forbids visible
+  nested types under this repo's `AnalysisMode=All`, and the name is already
+  self-qualifying — nested it would read `IntegerMath.IntegerSqrtRounding`. This
+  mirrors `MidpointRounding`'s relationship to `Math`, which is also the
+  precedent `BigRational.Round` follows.
+
+**The domain is the non-negative integers.** A negative input throws
+`ArgumentOutOfRangeException` rather than receiving a substitute result: no
+integer squares to a negative, and `BigInteger` has no NaN to stand in for one.
+The precedent is `BigInteger`'s own — `BigInteger.Pow` and `BigInteger.ModPow`
+throw `ArgumentOutOfRangeException` on a negative exponent, verified by running
+them rather than read off the docs. Arguments are validated in declaration
+order, so a call with both a negative value and an undefined mode reports
+`value`.
+
+`Nearest` needs no tie-breaking policy, and that is a theorem rather than a
+convention: for non-square `n`, `√n` is irrational and so never lands on the
+midpoint between consecutive integers; for square `n` it lands exactly on one.
+The test suite asserts the strict form of the bound — `(2k-1)² < 4n < (2k+1)²` —
+which is what makes the no-ties claim testable instead of merely stated.
+
+`FloorSqrt` is Newton-Raphson from a seed of `n` itself. Iterations measured at
+≈ `½·log₂ n` for `n = 10^k`, `k` from 4 to 480, which is the halving descent from
+that seed. A bit-length seed would cut it to `O(log log n)`; not done, because
+the algorithm as written is correct, proven and fast enough, and changing it was
+not what `halheinrich/Math#10` asked for.
+
 ## Public API
 
 Namespace `HalHeinrich.Numerics`.
@@ -263,6 +310,22 @@ undefined mode. `Parse` throws `FormatException`; the `TryParse` pair returns
 
 Equality is value equality over the reduced parts, so `==`, `Equals` and
 `GetHashCode` agree. `CompareTo` is a total order.
+
+The same namespace also ships the integer primitive:
+
+```csharp
+public enum IntegerSqrtRounding { Floor, Ceiling, Nearest }
+
+public static class IntegerMath
+{
+    public static BigInteger Sqrt(
+        BigInteger value, IntegerSqrtRounding rounding = IntegerSqrtRounding.Floor);
+}
+```
+
+`Sqrt` throws `ArgumentOutOfRangeException` on a negative `value` or an
+undefined `rounding`, and is exact for every input — there is no size above
+which the answer degrades.
 
 ## Pitfalls
 
