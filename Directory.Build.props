@@ -44,10 +44,27 @@
     BigRationalLibrary.Tests to BigRationalLibrary, both projects are in
     this solution, so the solution's configuration map already covers the
     edge and it already resolves correctly. Confirmed rather than reasoned
-    - Debug and Release outputs are byte-identical with and without this
-    property, 2eb25db84fa69872 and 8dc523aee5947338 either way, measured
-    at `-t:Rebuild` through the solution. It fixed nothing here and the
-    comment should not be read as claiming it did.
+    - Debug and Release outputs were byte-identical with and without this
+    property, rebuilt at `-t:Rebuild` through the solution with HEAD held
+    fixed across the pair. It fixed nothing here and the comment should
+    not be read as claiming it did.
+
+    That comparison quotes no hash, deliberately, and none should be added
+    to it. The SDK embeds the full HEAD sha in the assembly: this
+    project's generated AssemblyInfo carries an
+    AssemblyInformationalVersion of "0.1.0-preview2+533db8ac...", so a
+    producer hash identifies a commit rather than a source state and goes
+    stale at the next commit to this repo, not at the next source change.
+    A constant written here would be false by the time it was read, and
+    the before/after pair above is only valid because HEAD did not move
+    between its halves.
+
+    The durable form is the method rather than the number: build the
+    producer in Release, hash the producer's own Release output, hash the
+    copy of it that landed in a consumer's bin/Release, and compare the
+    two - recomputing both at comparison time so that neither side is a
+    remembered value. tools/check-release-linkage.sh is that check, and it
+    is where this property's effect is verified instead of asserted.
 
     What it buys is that the baseline is one thing in every member rather
     than a property three repos carry and one omits, where the omission
